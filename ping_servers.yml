@@ -1,0 +1,6 @@
+---
+- name: Roles 
+  hosts: all
+  roles:
+    - install_packages  
+    - debug_info 

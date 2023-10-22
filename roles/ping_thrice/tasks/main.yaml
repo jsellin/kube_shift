@@ -1,0 +1,11 @@
+---
+- name: Ping 3 times in a row
+  ping:
+  register: ping_result
+  changed_when: false
+  with_sequence: start=1 end=3
+  
+- name: Print Ping Result
+  debug:
+    var: ping_result.ping
+

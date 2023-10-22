@@ -1,0 +1,10 @@
+---
+- name: Ping once
+  ping:
+  register: ping_result
+  changed_when: false
+  
+- name: Print Ping Result
+  debug:
+    var: ping_result.ping
+

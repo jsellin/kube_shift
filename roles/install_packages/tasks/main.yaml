@@ -1,40 +1,144 @@
 ---
-- name: Install Kubernetes and OpenShift Tools on Debian-based Systems
-  hosts: k8s_nodes
+#- name: Update the system
+#  apt:
+#    update_cache=yes
+
+
+
+- name: Add Yarn APT key
+  apt_key:
+    url: "https://dl.yarnpkg.com/debian/pubkey.gpg"
+    state: present
+
+- name: Ensure the Stretch repository is absent
+  apt_repository:
+    repo: "deb http://deb.debian.org/debian stretch main"
+    state: absent
+
+
+- name: Prevent relese file from complaining       
+  shell: > 
+    timedatectl set-local-rtc 0
   become: true
-  vars:
-    k8s_packages:
-      - docker.io
-      - kubelet
-      - kubeadm
-      - kubectl
-    openshift_packages:
-      - podman
-      - cri-o
-  tasks:
 
-  - name: Update the system
-    apt:
-      update_cache: true
+      #- name: Prevent agen 
+      #shell: > 
+      # apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update
+      #become: true
 
+- name: Make sure /etc/localtime is absent
+  tags: localtime
+  ansible.builtin.file:
+    path: /etc/localtime
+    state: absent
+
+- name: Make sure /etc/localtime is absent  
+  tags: localtime 
+  ansible.builtin.file:
+    path: /etc/localtime
+    state: absent 
+    
+- name: Create a Symbolic link between Correct TimeZone and /etc/localtime    
+  tags: symlink1 
+  ansible.builtin.file:
+    src: /usr/share/zoneinfo/Europe/Stockholm
+    dest: /etc/localtime 
+    state: link 
+    force: yes  
+
+- name: Update timezone 
+  shell: >
+    hwclock --utc --hctosys
+
+
+
+- name: Create a Symbolic link between Correct TimeZone and /etc/localtime    
+  tags: symlink1
+  ansible.builtin.file:
+    src: /usr/share/zoneinfo/Europe/Stockholm
+    dest: /etc/localtime
+    state: link 
+    force: true 
+
+- name: Edit parameters in sshd config to enable xauthority file
+  tags: replace4
+  ansible.builtin.replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#X11 Forwarding yes'
+    replace: 'X11 Forwarding yes'
+
+- name: Edit parameters in sshd config to enable xauthority file
+  tags: replace5
+  ansible.builtin.replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#X11DisplayOffset 10'
+    replace: 'X11DisplayOffset 10'
+
+- name: Edit parameters in sshd config to enable xauthority file 
+  tags: replace5
+  ansible.builtin.replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#X11UseLocalhost yes'
+    replace: 'X11UseLocalhost yes'
+
+- name: Disable ipv6 
+  tags: ip6 
+  ansible.builtin.lineinfile:
+    path: /etc/sysctl.conf
+    line: '{{ item }}'
+  with_items: 
+    - 'net.ipv6.conf.all.disable_ipv6 = 1'
+    - 'net.ipv6.conf.default.disable_ipv6 = 1'
+    - 'net.ipv6.conf.lo.disable_ipv6 = 1'
+
+
+- name: Reload the ipv6 config 
+  shell: >
+    sysctl -p 
+  become: true
+
+- name: Add Kubernetes apt-key
+  apt_key:
+    url: "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
+    state: present
+
+- name: Add Kubernetes repository
+  apt_repository:
+    repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+    state: present
+
+
+- name: Add Podman apt-key
+  apt_key:
+    url: "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_12/Release.key"
+    state: present
+
+- name: Add Podman repository
+  apt_repository:
+    repo: "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_12/ /"
+    state: present
+    update_cache: yes
+
+
+- name: Add CRI-O apt-key
+  apt_key:
+    url: "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.20/Debian_12/Release.key"
+    state: present
+
+- name: Add CRI-O repository
+  apt_repository:
+    repo: "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.20/Debian_12/ /"
+    state: present
+        # update_cache: yes
+
+
+- block:
   - name: Install Kubernetes packages
     apt:
       name: "{{ item }}"
       state: present
     loop: "{{ k8s_packages }}"
     register: install_status
-
-  - name: Check and print status of Kubernetes packages
-    command: "dpkg -l {{ item }}"
-    loop: "{{ k8s_packages }}"
-    register: package_status
-    changed_when: false
-
-  - name: Display Kubernetes package status
-    debug:
-      msg: "{{ item.stdout_lines }}"
-    loop: "{{ package_status.results }}"
-    when: item.rc == 0
 
   - name: Install OpenShift packages
     apt:
@@ -43,28 +147,5 @@
     loop: "{{ openshift_packages }}"
     register: install_openshift_status
 
-  - name: Check and print status of OpenShift packages
-    command: "dpkg -l {{ item }}"
-    loop: "{{ openshift_packages }}"
-    register: openshift_package_status
-    changed_when: false
 
-  - name: Display OpenShift package status
-    debug:
-      msg: "{{ item.stdout_lines }}"
-    loop: "{{ openshift_package_status.results }}"
-    when: item.rc == 0
 
-  - name: Ensure Docker and kubelet are started and enabled at boot
-    service:
-      name: "{{ item }}"
-      state: started
-      enabled: true
-    loop:
-      - docker
-      - kubelet
-
-    post_tasks:
-     - name: Display installation done message
-    debug:
-      msg: "Kubernetes and OpenShift tools installation complete!"

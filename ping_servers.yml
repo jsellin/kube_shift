@@ -1,6 +1,36 @@
----
-- name: Roles 
-  hosts: all
-  roles:
-    - install_packages  
-    - debug_info 
+- name: Setup Kubernetes and OpenShift
+  hosts: labb
+  become: true
+  vars:
+    k8s_packages:
+      - docker.io
+      - kubelet
+      - kubeadm
+      - kubectl
+    openshift_packages:
+      - podman
+      - cri-o
+  
+  tasks:
+
+    - name: Install OpenShift and Kubernetes  
+      tags: kube_shift
+      block:
+        - name: Install Kubernetes and Open Shift Packages 
+          include_role:
+            name: install_packages
+ 
+    - name: Install Grafana 
+      tags: grafana
+      block:
+        - name: Install grafana 
+          include_role:
+            name: grafana-install
+
+    - name: Debug packages  
+      tags: debug
+      block:
+        - name: Debug Packages
+          include_role:
+            name: debug_packages
+

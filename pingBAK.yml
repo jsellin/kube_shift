@@ -1,0 +1,17 @@
+---
+- name: Roles 
+  hosts: all
+  become: true
+  vars:
+    k8s_packages:
+      - docker.io
+      - kubelet
+      - kubeadm
+      - kubectl
+    openshift_packages:
+      - podman
+      - cri-o
+  roles:
+    - install_packages
+    - debug_packages
+

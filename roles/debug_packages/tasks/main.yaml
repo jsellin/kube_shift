@@ -1,0 +1,42 @@
+---
+- name: Install Kubernetes and OpenShift Tools on Debian-based Systems
+  tasks:
+
+  - name: Check and print status of Kubernetes packages
+    command: "dpkg -l {{ item }}"
+    loop: "{{ k8s_packages }}"
+    register: package_status
+    changed_when: false
+
+  - name: Display Kubernetes package status
+    debug:
+      msg: "{{ item.stdout_lines }}"
+    loop: "{{ package_status.results }}"
+    when: item.rc == 0
+
+  - name: Check and print status of OpenShift packages
+    command: "dpkg -l {{ item }}"
+    loop: "{{ openshift_packages }}"
+    register: openshift_package_status
+    changed_when: false
+
+  - name: Display OpenShift package status
+    debug:
+      msg: "{{ item.stdout_lines }}"
+    loop: "{{ openshift_package_status.results }}"
+    when: item.rc == 0
+
+  - name: Ensure Docker and kubelet are started and enabled at boot
+    service:
+      name: "{{ item }}"
+      state: started
+      enabled: true
+    loop:
+      - docker
+      - kubelet
+
+  post_tasks:
+    - name: Display installation done message
+      debug:
+        msg: "Kubernetes and OpenShift tools installation complete!"
+

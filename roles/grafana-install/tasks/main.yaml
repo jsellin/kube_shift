@@ -1,0 +1,38 @@
+
+---
+- name: Install prerequisite packages
+  apt:
+    name:
+      - apt-transport-https
+      - software-properties-common
+      - wget
+    state: present
+
+- name: Import the GPG key for Grafana
+  command:
+    cmd: wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | tee /etc/apt/keyrings/grafana.gpg > /dev/null
+    creates: /etc/apt/keyrings/grafana.gpg
+
+- name: Add repository for Grafana stable releases
+  lineinfile:
+    path: /etc/apt/sources.list.d/grafana.list
+    line: "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main"
+    create: yes
+    state: present
+
+# Uncomment this block if you want beta releases
+# - name: Add repository for Grafana beta releases
+#   lineinfile:
+#     path: /etc/apt/sources.list.d/grafana.list
+#     line: "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com beta main"
+#     create: yes
+#     state: present
+
+- name: Update the APT package cache
+  apt:
+    update_cache: yes
+
+- name: Install Grafana
+  apt:
+    name: grafana
+    state: present

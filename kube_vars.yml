@@ -1,0 +1,140 @@
+# kube_vars.yml
+
+# Used for the runtime 
+# Package options.
+containerd_package: containerd.io
+containerd_package_state: present
+
+# Service options.
+containerd_service_state: started
+containerd_service_enabled: true
+
+# Write a default containerd config.toml file.
+containerd_config_default_write: true
+
+# Set systemd as cgroup driver in config.toml
+# Only use with containerd_config_default_write: true
+containerd_config_cgroup_driver_systemd: false
+
+# Used only for Debian/Ubuntu. Switch 'stable' to 'nightly' if needed.
+docker_apt_release_channel: stable
+docker_apt_arch: '{{ (ansible_architecture == "aarch64") | ternary("arm64", "amd64") }}'
+docker_apt_repository: "deb [arch={{ docker_apt_arch }}] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} {{ docker_apt_release_channel }}"
+docker_apt_ignore_key_error: true
+docker_apt_gpg_key: https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
+k8s_packages:
+  - docker.io
+  - kubelet
+  - kubeadm
+  - kubectl
+openshift_packages:
+  - podman
+  - cri-o
+
+kubernetes_packages:
+  - name: kubelet
+    state: present
+  - name: kubectl
+    state: present
+  - name: kubeadm
+    state: present
+  - name: kubernetes-cni
+    state: present
+
+kubernetes_version: '1.25'
+kubernetes_version_rhel_package: '1.25.1'
+
+procps_package: procps
+kubelet_environment_file_path: /etc/default/kubelet
+ansible_os_family: Debian
+
+# Whether the particular server will serve as a Kubernetes control_plane (default) or node.
+# The control plane will have kubeadm init run on it to intialize the entire K8s control plane, while nodes will have kubeadm join run on them to join them to the control_plane.
+kubernetes_role: control_plane
+
+
+
+# Extra args to pass to kubelet during startup. E.g. to allow kubelet to start up even if there is swap is enabled on your server, set this to: "--fail-swap-on=false". Or to specify the node-ip advertised by kubelet, set this to "--node-ip={{ ansible_host }}". This option is deprecated. Please use kubernetes_config_kubelet_configuration instead.
+# This is deprecated. Please use kubernetes_config_kubelet_configuration instead.
+#sudo journalctl -u kubelet -n 100
+
+kubernetes_kubelet_extra_args: "--fail-swap-on=false"
+
+# Extra args to pass to kubeadm init during K8s control plane initialization. E.g. to specify extra Subject Alternative Names for API server certificate, set this to: "--apiserver-cert-extra-sans my-custom.host"
+kubernetes_kubeadm_init_extra_opts: "--apiserver-cert-extra-sans 192.168.1.111"
+
+# Extra args to pass to the generated kubeadm join command during K8s node initialization. E.g. to ignore certain preflight errors like swap being enabled, set this to: --ignore-preflight-errors=Swap
+kubernetes_join_command_extra_opts: ""
+
+
+# Whether to remove the taint that denies pods from being deployed to the Kubernetes control plane. If you have a single-node cluster, this should definitely be True. Otherwise, set to False if you want a dedicated Kubernetes control plane which doesn't run any other pods.
+kubernetes_allow_pods_on_control_plane: true
+
+# This role currently supports flannel (default), calico or weave for cluster pod networking. Choose only one for your cluster; converting between them is not done automatically and could result in broken networking; if you need to switch from one to another, it should be done outside of this role.
+kubernetes_pod_network:
+  # Flannel CNI.
+  cni: 'flannel'
+  cidr: '10.244.0.0/16'
+  # Calico CNI.
+  # cni: 'calico'
+  # cidr: '192.168.0.0/16'
+
+
+
+# Options to configure kubelet on any nodes in your cluster through the kubeadm init process. For syntax options read the kubelet config file and kubelet integration documentation.
+# NOTE: This is the recommended way to do the kubelet-configuration. Most command-line-options are deprecated.
+# NOTE: The recommended cgroupDriver depends on your Container Runtime. When using this role with Docker instead of containerd, this value should be changed to cgroupfs.
+# https://kubernetes.io/docs/tasks/administer-cluster/kubelet-config-file/
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/kubelet-integration/
+kubernetes_kubeadm_kubelet_config_file_path: '/etc/kubernetes/kubeadm-kubelet-config.yaml'
+kubernetes_config_kubelet_configuration:
+  cgroupDriver: "systemd"
+
+
+
+# The following variables are parsed as options to.
+# To understand its syntax, see kubelet-integration and kubeadm-config-file.
+# The skeleton (apiVersion, kind) of the config file will be created by this role, so do not define them within the variables. (See templates/kubeadm-kubelet-config.j2).
+# https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/kubelet-integration/
+# https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-init/#config-file
+kubernetes_config_init_configuration:
+  localAPIEndpoint:
+    advertiseAddress: "{{ kubernetes_apiserver_advertise_address | default(ansible_default_ipv4.address, true) }}"
+# Options passed to kubeadm init when initializing the Kubernetes control plane. The kubernetes_apiserver_advertise_address defaults to ansible_default_ipv4.address if it's left empty.
+
+# if you use the next lines, remove the command line argument below
+# nodeRegistration:
+#    ignorePreflightErrors:
+#      - all
+
+
+
+
+# Defines the options under kind: InitConfiguration.
+# Including kubernetes_apiserver_advertise_address here is for backward-compatibilty to older versions of this role, where kubernetes_apiserver_advertise_address was used with a command-line-option.
+kubernetes_config_cluster_configuration:
+  networking:
+    podSubnet: "{{ kubernetes_pod_network.cidr }}"
+  kubernetesVersion: "{{ kubernetes_version_kubeadm }}"
+
+kubernetes_config_kube_proxy_configuration: {}
+# Options to configure kubelet's proxy configuration in the KubeProxyConfiguration section of the kubelet configuration.
+
+
+kubernetes_apiserver_advertise_address: ''
+kubernetes_version_kubeadm: 'stable-{{ kubernetes_version }}'
+kubernetes_ignore_preflight_errors: 'all'
+
+kubernetes_apt_release_channel: main
+# Note that xenial repo is used for all Debian derivatives at this time.
+kubernetes_apt_repository: "deb http://apt.kubernetes.io/ kubernetes-xenial {{ kubernetes_apt_release_channel }}"
+kubernetes_apt_ignore_key_error: false
+
+
+# Flannel manifest file to apply to the Kubernetes cluster to enable networking. You can copy your own files to your server and apply them instead, if you need to customize the Flannel networking configuration.
+# Flannel config file.
+kubernetes_flannel_manifest_file: https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+
+# Calico manifest file to apply to the Kubernetes cluster (if using Calico instead of Flannel).
+# Calico config file.
+kubernetes_calico_manifest_file: https://projectcalico.docs.tigera.io/manifests/calico.yaml

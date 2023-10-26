@@ -1,24 +1,35 @@
 - name: Setup Kubernetes and OpenShift
-  hosts: labb
+  hosts: labblocal
   become: true
-  vars:
-    k8s_packages:
-      - docker.io
-      - kubelet
-      - kubeadm
-      - kubectl
-    openshift_packages:
-      - podman
-      - cri-o
+  vars_files:
+    - kube_vars.yml
+    - grafana_vars.yml 
   
   tasks:
 
-    - name: Install OpenShift and Kubernetes  
-      tags: kube_shift
+    - name: Setup Container Runtime #https://kubernetes.io/docs/setup/production-environment/container-runtimes/
+      become: true
+      tags: containernerd 
       block:
-        - name: Install Kubernetes and Open Shift Packages 
+        - name: ContainerRuntime #Choices Containerd, CRI-O, Docker Engine, Mirantis  
           include_role:
-            name: install_packages
+            name: containerd  
+
+    - name: Install Kubernetes
+      become: true
+      tags: kube
+      block:
+        - name: Install Kubernetes  
+          include_role:
+            name: kubernetes_install
+
+#     - name: Install OpenShift and Kubernetes
+#       become: true
+#       tags: kube_shift
+#       block:
+#         - name: Install Kubernetes and Open Shift Packages 
+#           include_role:
+#             name: install_packages
  
     - name: Install Grafana 
       tags: grafana

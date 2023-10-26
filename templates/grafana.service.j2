@@ -1,0 +1,15 @@
+[Unit]
+Description=Grafana - analytics and monitoring observability service
+Documentation=https://grafana.com/docs/grafana/latest/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+# You'll need to fill in the actual service parameters here
+ExecStart=/path/to/grafana/start
+User=grafana
+Group=grafana
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,5 @@
+src1: https://nodejs.org/dist/v18.7.0/node-v18.7.0-linux-x64.tar.gz  #node version to install
+dest1: /tmp/nodejs/ #Destination unarchived of node 
+dest2: /etc/ansible/ #Destination of where node will be archived. 
+
+
